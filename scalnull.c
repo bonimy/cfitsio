@@ -8,9 +8,9 @@
 #include <string.h>
 #include "fitsio2.h"
 /*--------------------------------------------------------------------------*/
-int ffpthp(fitsfile *fptr,      /* I - FITS file pointer */
-           long theap,          /* I - starting addrss for the heap */
-           int *status)         /* IO - error status     */
+int ffpthp(fitsfile* fptr, /* I - FITS file pointer */
+           long theap,     /* I - starting addrss for the heap */
+           int* status)    /* IO - error status     */
 /*
   Define the starting address for the heap for a binary table.
   The default address is NAXIS1 * NAXIS2.  It is in units of
@@ -19,8 +19,7 @@ int ffpthp(fitsfile *fptr,      /* I - FITS file pointer */
   FITS header.
 */
 {
-    if (*status > 0 || theap < 1)
-        return(*status);
+    if (*status > 0 || theap < 1) return (*status);
 
     /* reset position to the correct HDU if necessary */
     if (fptr->HDUposition != (fptr->Fptr)->curhdu)
@@ -30,13 +29,13 @@ int ffpthp(fitsfile *fptr,      /* I - FITS file pointer */
 
     ffukyj(fptr, "THEAP", theap, "byte offset to heap area", status);
 
-    return(*status);
+    return (*status);
 }
 /*--------------------------------------------------------------------------*/
-int ffpscl(fitsfile *fptr,      /* I - FITS file pointer               */
-           double scale,        /* I - scaling factor: value of BSCALE */
-           double zero,         /* I - zero point: value of BZERO      */
-           int *status)         /* IO - error status                   */
+int ffpscl(fitsfile* fptr, /* I - FITS file pointer               */
+           double scale,   /* I - scaling factor: value of BSCALE */
+           double zero,    /* I - zero point: value of BZERO      */
+           int* status)    /* IO - error status                   */
 /*
   Define the linear scaling factor for the primary array or image extension
   pixel values. This routine overrides the scaling values given by the
@@ -47,42 +46,39 @@ int ffpscl(fitsfile *fptr,      /* I - FITS file pointer               */
   keyword values (or 1. and 0. respectively if the keywords are not present).
 */
 {
-    tcolumn *colptr;
+    tcolumn* colptr;
     int hdutype;
 
-    if (*status > 0)
-        return(*status);
+    if (*status > 0) return (*status);
 
-    if (scale == 0)
-        return(*status = ZERO_SCALE);  /* zero scale value is illegal */
+    if (scale == 0) return (*status = ZERO_SCALE); /* zero scale value is illegal */
 
-    if (ffghdt(fptr, &hdutype, status) > 0)  /* get HDU type */
-        return(*status);
+    if (ffghdt(fptr, &hdutype, status) > 0) /* get HDU type */
+        return (*status);
 
-    if (hdutype != IMAGE_HDU)
-        return(*status = NOT_IMAGE);         /* not proper HDU type */
+    if (hdutype != IMAGE_HDU) return (*status = NOT_IMAGE); /* not proper HDU type */
 
     if (fits_is_compressed_image(fptr, status)) /* compressed images */
     {
         (fptr->Fptr)->cn_bscale = scale;
-        (fptr->Fptr)->cn_bzero  = zero;
-        return(*status);
+        (fptr->Fptr)->cn_bzero = zero;
+        return (*status);
     }
 
     /* set pointer to the first 'column' (contains group parameters if any) */
-    colptr = (fptr->Fptr)->tableptr; 
+    colptr = (fptr->Fptr)->tableptr;
 
-    colptr++;   /* increment to the 2nd 'column' pointer  (the image itself) */
+    colptr++; /* increment to the 2nd 'column' pointer  (the image itself) */
 
     colptr->tscale = scale;
     colptr->tzero = zero;
 
-    return(*status);
+    return (*status);
 }
 /*--------------------------------------------------------------------------*/
-int ffpnul(fitsfile *fptr,      /* I - FITS file pointer                */
-           LONGLONG nulvalue,   /* I - null pixel value: value of BLANK */
-           int *status)         /* IO - error status                    */
+int ffpnul(fitsfile* fptr,    /* I - FITS file pointer                */
+           LONGLONG nulvalue, /* I - null pixel value: value of BLANK */
+           int* status)       /* IO - error status                    */
 /*
   Define the value used to represent undefined pixels in the primary array or
   image extension. This only applies to integer image pixel (i.e. BITPIX > 0).
@@ -94,36 +90,34 @@ int ffpnul(fitsfile *fptr,      /* I - FITS file pointer                */
   present).
 */
 {
-    tcolumn *colptr;
+    tcolumn* colptr;
     int hdutype;
 
-    if (*status > 0)
-        return(*status);
+    if (*status > 0) return (*status);
 
-    if (ffghdt(fptr, &hdutype, status) > 0)  /* get HDU type */
-        return(*status);
+    if (ffghdt(fptr, &hdutype, status) > 0) /* get HDU type */
+        return (*status);
 
-    if (hdutype != IMAGE_HDU)
-        return(*status = NOT_IMAGE);         /* not proper HDU type */
+    if (hdutype != IMAGE_HDU) return (*status = NOT_IMAGE); /* not proper HDU type */
 
     if (fits_is_compressed_image(fptr, status)) /* ignore compressed images */
-        return(*status);
+        return (*status);
 
     /* set pointer to the first 'column' (contains group parameters if any) */
-    colptr = (fptr->Fptr)->tableptr; 
+    colptr = (fptr->Fptr)->tableptr;
 
-    colptr++;   /* increment to the 2nd 'column' pointer  (the image itself) */
+    colptr++; /* increment to the 2nd 'column' pointer  (the image itself) */
 
     colptr->tnull = nulvalue;
 
-    return(*status);
+    return (*status);
 }
 /*--------------------------------------------------------------------------*/
-int fftscl(fitsfile *fptr,      /* I - FITS file pointer */
-           int colnum,          /* I - column number to apply scaling to */
-           double scale,        /* I - scaling factor: value of TSCALn   */
-           double zero,         /* I - zero point: value of TZEROn       */
-           int *status)         /* IO - error status     */
+int fftscl(fitsfile* fptr, /* I - FITS file pointer */
+           int colnum,     /* I - column number to apply scaling to */
+           double scale,   /* I - scaling factor: value of TSCALn   */
+           double zero,    /* I - zero point: value of TZEROn       */
+           int* status)    /* IO - error status     */
 /*
   Define the linear scaling factor for the TABLE or BINTABLE extension
   column values. This routine overrides the scaling values given by the
@@ -134,34 +128,31 @@ int fftscl(fitsfile *fptr,      /* I - FITS file pointer */
   keyword values (or 1. and 0. respectively if the keywords are not present).
 */
 {
-    tcolumn *colptr;
+    tcolumn* colptr;
     int hdutype;
 
-    if (*status > 0)
-        return(*status);
+    if (*status > 0) return (*status);
 
-    if (scale == 0)
-        return(*status = ZERO_SCALE);  /* zero scale value is illegal */
+    if (scale == 0) return (*status = ZERO_SCALE); /* zero scale value is illegal */
 
-    if (ffghdt(fptr, &hdutype, status) > 0)  /* get HDU type */
-        return(*status);
+    if (ffghdt(fptr, &hdutype, status) > 0) /* get HDU type */
+        return (*status);
 
-    if (hdutype == IMAGE_HDU)
-        return(*status = NOT_TABLE);         /* not proper HDU type */
+    if (hdutype == IMAGE_HDU) return (*status = NOT_TABLE); /* not proper HDU type */
 
-    colptr = (fptr->Fptr)->tableptr;   /* set pointer to the first column */
-    colptr += (colnum - 1);     /* increment to the correct column */
+    colptr = (fptr->Fptr)->tableptr; /* set pointer to the first column */
+    colptr += (colnum - 1);          /* increment to the correct column */
 
     colptr->tscale = scale;
     colptr->tzero = zero;
 
-    return(*status);
+    return (*status);
 }
 /*--------------------------------------------------------------------------*/
-int fftnul(fitsfile *fptr,      /* I - FITS file pointer                  */
-           int colnum,          /* I - column number to apply nulvalue to */
-           LONGLONG nulvalue,   /* I - null pixel value: value of TNULLn  */
-           int *status)         /* IO - error status                      */
+int fftnul(fitsfile* fptr,    /* I - FITS file pointer                  */
+           int colnum,        /* I - column number to apply nulvalue to */
+           LONGLONG nulvalue, /* I - null pixel value: value of TNULLn  */
+           int* status)       /* IO - error status                      */
 /*
   Define the value used to represent undefined pixels in the BINTABLE column.
   This only applies to integer datatype columns (TFORM = B, I, or J).
@@ -173,30 +164,28 @@ int fftnul(fitsfile *fptr,      /* I - FITS file pointer                  */
   present).
 */
 {
-    tcolumn *colptr;
+    tcolumn* colptr;
     int hdutype;
 
-    if (*status > 0)
-        return(*status);
+    if (*status > 0) return (*status);
 
-    if (ffghdt(fptr, &hdutype, status) > 0)  /* get HDU type */
-        return(*status);
+    if (ffghdt(fptr, &hdutype, status) > 0) /* get HDU type */
+        return (*status);
 
-    if (hdutype != BINARY_TBL)
-        return(*status = NOT_BTABLE);        /* not proper HDU type */
- 
-    colptr = (fptr->Fptr)->tableptr;   /* set pointer to the first column */
-    colptr += (colnum - 1);    /* increment to the correct column */
+    if (hdutype != BINARY_TBL) return (*status = NOT_BTABLE); /* not proper HDU type */
+
+    colptr = (fptr->Fptr)->tableptr; /* set pointer to the first column */
+    colptr += (colnum - 1);          /* increment to the correct column */
 
     colptr->tnull = nulvalue;
 
-    return(*status);
+    return (*status);
 }
 /*--------------------------------------------------------------------------*/
-int ffsnul(fitsfile *fptr,      /* I - FITS file pointer                  */
-           int colnum,          /* I - column number to apply nulvalue to */
-           char *nulstring,     /* I - null pixel value: value of TNULLn  */
-           int *status)         /* IO - error status                      */
+int ffsnul(fitsfile* fptr,  /* I - FITS file pointer                  */
+           int colnum,      /* I - column number to apply nulvalue to */
+           char* nulstring, /* I - null pixel value: value of TNULLn  */
+           int* status)     /* IO - error status                      */
 /*
   Define the string used to represent undefined pixels in the ASCII TABLE
   column. This routine overrides the null  value given by the TNULLn keyword
@@ -207,23 +196,21 @@ int ffsnul(fitsfile *fptr,      /* I - FITS file pointer                  */
   present).
 */
 {
-    tcolumn *colptr;
+    tcolumn* colptr;
     int hdutype;
 
-    if (*status > 0)
-        return(*status);
+    if (*status > 0) return (*status);
 
-    if (ffghdt(fptr, &hdutype, status) > 0)  /* get HDU type */
-        return(*status);
+    if (ffghdt(fptr, &hdutype, status) > 0) /* get HDU type */
+        return (*status);
 
-    if (hdutype != ASCII_TBL)
-        return(*status = NOT_ATABLE);        /* not proper HDU type */
- 
-    colptr = (fptr->Fptr)->tableptr;   /* set pointer to the first column */
-    colptr += (colnum - 1);    /* increment to the correct column */
+    if (hdutype != ASCII_TBL) return (*status = NOT_ATABLE); /* not proper HDU type */
+
+    colptr = (fptr->Fptr)->tableptr; /* set pointer to the first column */
+    colptr += (colnum - 1);          /* increment to the correct column */
 
     colptr->strnull[0] = '\0';
-    strncat(colptr->strnull, nulstring, 19);  /* limit string to 19 chars */
+    strncat(colptr->strnull, nulstring, 19); /* limit string to 19 chars */
 
-    return(*status);
+    return (*status);
 }

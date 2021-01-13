@@ -31,10 +31,10 @@
    version 2.2 of Bison.  */
 
 #ifndef FF_FF_Y_TAB_H_INCLUDED
-# define FF_FF_Y_TAB_H_INCLUDED
+#define FF_FF_Y_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef FFDEBUG
-# define FFDEBUG 0
+#define FFDEBUG 0
 #endif
 #if FFDEBUG
 extern int ffdebug;
@@ -42,9 +42,8 @@ extern int ffdebug;
 
 /* Token type.  */
 #ifndef FFTOKENTYPE
-# define FFTOKENTYPE
-  enum fftokentype
-  {
+#define FFTOKENTYPE
+enum fftokentype {
     BOOLEAN = 258,
     LONG = 259,
     DOUBLE = 260,
@@ -78,7 +77,7 @@ extern int ffdebug;
     UMINUS = 288,
     ACCUM = 289,
     DIFF = 290
-  };
+};
 #endif
 /* Tokens.  */
 #define BOOLEAN 258
@@ -116,29 +115,28 @@ extern int ffdebug;
 #define DIFF 290
 
 /* Value type.  */
-#if ! defined FFSTYPE && ! defined FFSTYPE_IS_DECLARED
+#if !defined FFSTYPE && !defined FFSTYPE_IS_DECLARED
 
-union FFSTYPE
-{
+union FFSTYPE {
 #line 192 "eval.y" /* yacc.c:1910  */
 
-    int    Node;        /* Index of Node */
-    double dbl;         /* real value    */
-    long   lng;         /* integer value */
-    char   log;         /* logical value */
-    char   str[MAX_STRLEN];    /* string value  */
+    int Node;             /* Index of Node */
+    double dbl;           /* real value    */
+    long lng;             /* integer value */
+    char log;             /* logical value */
+    char str[MAX_STRLEN]; /* string value  */
 
 #line 132 "y.tab.h" /* yacc.c:1910  */
 };
 
 typedef union FFSTYPE FFSTYPE;
-# define FFSTYPE_IS_TRIVIAL 1
-# define FFSTYPE_IS_DECLARED 1
+#define FFSTYPE_IS_TRIVIAL 1
+#define FFSTYPE_IS_DECLARED 1
 #endif
 
 
 extern FFSTYPE fflval;
 
-int ffparse (void);
+int ffparse(void);
 
 #endif /* !FF_FF_Y_TAB_H_INCLUDED  */

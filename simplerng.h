@@ -1,4 +1,4 @@
-/* 
+/*
    Simple Random Number Generators
        - getuniform - uniform deviate [0,1]
        - getnorm    - gaussian (normal) deviate (mean=0, stddev=1)
@@ -19,7 +19,7 @@
 */
 
 extern void simplerng_setstate(unsigned int u, unsigned int v);
-extern void simplerng_getstate(unsigned int *u, unsigned int *v);
+extern void simplerng_getstate(unsigned int* u, unsigned int* v);
 extern void simplerng_srand(unsigned int seed);
 extern double simplerng_getuniform(void);
 extern double simplerng_getnorm(void);
