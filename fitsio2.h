@@ -1121,7 +1121,22 @@ int stream_read(int driverhandle, void* buffer, long nbytes);
 int stream_write(int driverhandle, void* buffer, long nbytes);
 
 /* memory driver I/O routines */
-
+int user_openusr(int (*init)(void* userp),
+                 int (*truncate)(LONGLONG filesize, void* userp),
+                 int (*close)(void* userp), int (*size)(LONGLONG* sizex, void* userp),
+                 int (*flush)(void* userp),
+                 int (*seek)(LONGLONG offset, LONGLONG* result, void* userp),
+                 int (*read)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+                 int (*write)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+                 void* userp, int* handle);
+int user_init(void);
+int user_truncate(int driverhandle, LONGLONG filesize);
+int user_close(int driverhandle);
+int user_size(int driverhandle, LONGLONG* sizex);
+int user_flush(int driverhandle);
+int user_seek(int driverhandle, LONGLONG offset);
+int user_read(int driverhandle, void* buffer, long nbytes);
+int user_write(int driverhandle, void* buffer, long nbytes);
 int mem_init(void);
 int mem_setoptions(int options);
 int mem_getoptions(int* options);

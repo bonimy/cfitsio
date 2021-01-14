@@ -30,6 +30,7 @@
 #define fits_create_file ffinit
 #define fits_create_diskfile ffdkinit
 #define fits_create_memfile ffimem
+#define fits_create_userfile ffiusr
 #define fits_create_template fftplt
 #define fits_flush_file ffflus
 #define fits_flush_buffer ffflsh
