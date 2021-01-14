@@ -795,6 +795,14 @@ int CFITS_API ffdkinit(fitsfile** fptr, const char* filename, int* status);
 int CFITS_API ffimem(fitsfile** fptr, void** buffptr, size_t* buffsize,
                      size_t deltasize, void* (*mem_realloc)(void* p, size_t newsize),
                      int* status);
+int CFITS_API
+ffiusr(fitsfile** fptr, int (*init)(void* userp),
+       int (*truncate)(LONGLONG filesize, void* userp), int (*close)(void* userp),
+       int (*size)(LONGLONG* sizex, void* userp), int (*flush)(void* userp),
+       int (*seek)(LONGLONG offset, LONGLONG* result, void* userp),
+       int (*read)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+       int (*write)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+       void* userp, int* status);
 int CFITS_API fftplt(fitsfile** fptr, const char* filename, const char* tempname,
                      int* status);
 int CFITS_API ffflus(fitsfile* fptr, int* status);

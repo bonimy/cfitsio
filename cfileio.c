@@ -17,7 +17,7 @@
 #endif
 
 #define MAX_PREFIX_LEN 20 /* max length of file type prefix (e.g. 'http://') */
-#define MAX_DRIVERS 31    /* max number of file I/O drivers */
+#define MAX_DRIVERS 32    /* max number of file I/O drivers */
 
 typedef struct /* structure containing pointers to I/O driver functions */
 {
@@ -3950,6 +3950,152 @@ int ffimem(fitsfile** fptr,  /* O - FITS file pointer                   */
     return (*status);
 }
 /*--------------------------------------------------------------------------*/
+/* ffiusr == fits_create_userfile */
+
+int ffiusr(fitsfile** fptr, /* O - FITS file pointer                   */
+           int (*init)(void* userp), int (*truncate)(LONGLONG filesize, void* userp),
+           int (*close)(void* userp), int (*size)(LONGLONG* sizex, void* userp),
+           int (*flush)(void* userp),
+           int (*seek)(LONGLONG offset, LONGLONG* result, void* userp),
+           int (*read)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+           int (*write)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+           void* userp, int* status) /* IO - error status                       */
+
+/*
+  Create and initialize a new FITS file by user-defined functions.
+*/
+{
+    int ii, driver, slen;
+    LONGLONG fsize;
+    char urltype[MAX_PREFIX_LEN];
+    int handle;
+
+    if (*status > 0) return (*status);
+
+    *fptr = 0; /* initialize null file pointer */
+
+    if (need_to_initialize) { /* this is called only once */
+        *status = fits_init_cfitsio();
+    }
+
+    if (*status > 0) return (*status);
+
+    strcpy(urltype, "userdef://"); /* URL type for user-defined file type */
+
+    *status = urltype2driver(urltype, &driver);
+
+    if (*status > 0) {
+        ffpmsg("could not find driver for user-defined file type: (ffiusr)");
+        return (*status);
+    }
+
+    /* call driver routine to "open" the user-defined file */
+    FFLOCK; /* lock this while searching for vacant handle */
+    *status = user_openusr(init, truncate, close, size, flush, seek, read, write, userp,
+                           &handle);
+    FFUNLOCK;
+
+    if (*status > 0) {
+        ffpmsg("failed to open user-defined file type: (ffiusr)");
+        return (*status);
+    }
+
+    /* allocate fitsfile structure and initialize = 0 */
+    *fptr = (fitsfile*)calloc(1, sizeof(fitsfile));
+
+    if (!(*fptr)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to allocate structure for user-defined file type: (ffiusr)");
+        return (*status = MEMORY_ALLOCATION);
+    }
+
+    /* allocate FITSfile structure and initialize = 0 */
+    (*fptr)->Fptr = (FITSfile*)calloc(1, sizeof(FITSfile));
+
+    if (!((*fptr)->Fptr)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to allocate structure for user-defined file type: (ffiusr)");
+        free(*fptr);
+        *fptr = 0;
+        return (*status = MEMORY_ALLOCATION);
+    }
+
+    slen = 32;                                       /* reserve at least 32 chars */
+    ((*fptr)->Fptr)->filename = (char*)malloc(slen); /* mem for file name */
+
+    if (!(((*fptr)->Fptr)->filename)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to allocate memory for filename: (ffiusr)");
+        free((*fptr)->Fptr);
+        free(*fptr);
+        *fptr = 0; /* return null file pointer */
+        return (*status = MEMORY_ALLOCATION);
+    }
+
+    /* mem for headstart array */
+    ((*fptr)->Fptr)->headstart = (LONGLONG*)calloc(1001, sizeof(LONGLONG));
+
+    if (!(((*fptr)->Fptr)->headstart)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to allocate memory for headstart array: (ffiusr)");
+        free(((*fptr)->Fptr)->filename);
+        free((*fptr)->Fptr);
+        free(*fptr);
+        *fptr = 0; /* return null file pointer */
+        return (*status = MEMORY_ALLOCATION);
+    }
+
+    /* mem for file I/O buffers */
+    ((*fptr)->Fptr)->iobuffer = (char*)calloc(NIOBUF, IOBUFLEN);
+
+    if (!(((*fptr)->Fptr)->iobuffer)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to allocate memory for iobuffer array: (ffiusr)");
+        free(((*fptr)->Fptr)->headstart); /* free memory for headstart array */
+        free(((*fptr)->Fptr)->filename);
+        free((*fptr)->Fptr);
+        free(*fptr);
+        *fptr = 0; /* return null file pointer */
+        return (*status = MEMORY_ALLOCATION);
+    }
+
+    /* initialize the ageindex array (relative age of the I/O buffers) */
+    /* and initialize the bufrecnum array as being empty */
+    for (ii = 0; ii < NIOBUF; ii++) {
+        ((*fptr)->Fptr)->ageindex[ii] = ii;
+        ((*fptr)->Fptr)->bufrecnum[ii] = -1;
+    }
+
+    if ((*driverTable[driver].size)(handle, &fsize)) {
+        (*driverTable[driver].close)(handle); /* close the file */
+        ffpmsg("failed to read size of user-defined file type: (ffiusr)");
+        free(((*fptr)->Fptr)->headstart); /* free memory for headstart array */
+        free(((*fptr)->Fptr)->filename);
+        free((*fptr)->Fptr);
+        free(*fptr);
+        *fptr = 0; /* return null file pointer */
+        return (*status = SEEK_ERROR);
+    }
+
+    /* store the parameters describing the file */
+    ((*fptr)->Fptr)->MAXHDU = 1000;               /* initial size of headstart */
+    ((*fptr)->Fptr)->filehandle = handle;         /* file handle */
+    ((*fptr)->Fptr)->driver = driver;             /* driver number */
+    strcpy(((*fptr)->Fptr)->filename, "usrfile"); /* dummy filename */
+    ((*fptr)->Fptr)->filesize = fsize;            /* physical file size */
+    ((*fptr)->Fptr)->logfilesize = fsize;         /* logical file size */
+    ((*fptr)->Fptr)->writemode = 1;               /* read-write mode    */
+    ((*fptr)->Fptr)->datastart = DATA_UNDEFINED;  /* unknown start of data */
+    ((*fptr)->Fptr)->curbuf = -1;                 /* undefined current IO buffer */
+    ((*fptr)->Fptr)->open_count = 1;              /* structure is currently used once */
+    ((*fptr)->Fptr)->validcode = VALIDSTRUC;      /* flag denoting valid structure */
+    ((*fptr)->Fptr)->noextsyntax = 0; /* extended syntax can be used in filename */
+
+    ffldrc(*fptr, 0, IGNORE_EOF, status);   /* initialize first record */
+    fits_store_Fptr((*fptr)->Fptr, status); /* store Fptr address */
+    return (*status);
+}
+/*--------------------------------------------------------------------------*/
 int fits_init_cfitsio(void)
 /*
   initialize anything that is required before using the CFITSIO routines
@@ -4535,6 +4681,20 @@ int fits_init_cfitsio(void)
     }
 #endif
 
+    /* 32--------------------User defined driver routines------------------*/
+    status = fits_register_driver(
+            "userdef://", user_init, mem_shutdown, mem_setoptions, mem_getoptions,
+            mem_getversion, NULL,         /* checkfile not needed */
+            0,                            /* open function not required */
+            0,                            /* create function not required */
+            user_truncate, user_close, 0, /* remove function not required */
+            user_size, user_flush, user_seek, user_read, user_write);
+
+    if (status) {
+        ffpmsg("failed to register the userdef:// driver (init_cfitsio)");
+        FFUNLOCK;
+        return (status);
+    }
 
     /* reset flag.  Any other threads will now not need to call this routine */
     need_to_initialize = 0;

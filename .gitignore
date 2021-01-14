@@ -5,6 +5,8 @@ cfitsio.pc
 testprog
 testprog.lis
 testprog.fit
+vecexample
+vecexample.fit
 
 # Created by https://www.toptal.com/developers/gitignore/api/c,autotools
 # Edit at https://www.toptal.com/developers/gitignore?templates=c,autotools

@@ -48,6 +48,136 @@ typedef struct /* structure containing mem file structure */
 
 static memdriver memTable[NMAXFILES]; /* allocate mem file handle tables */
 
+typedef struct /* structure containing user-defined file structure */
+{
+    void* userp;     /* Pointer to user-supplied data. */
+    LONGLONG offset; /* Seek offset for read/write functions. */
+
+    /* User-defined function that implement the fundamental I/O tasks for */
+    /* FITS operations. */
+    int (*truncate)(LONGLONG filesize, void* userp);
+    int (*close)(void* userp);
+    int (*size)(LONGLONG* sizex, void* userp);
+    int (*flush)(void* userp);
+    int (*seek)(LONGLONG offset, LONGLONG* result, void* userp);
+    int (*read)(void* buffer, long nbytes, LONGLONG* offset, void* userp);
+    int (*write)(void* buffer, long nbytes, LONGLONG* offset, void* userp);
+} userdriver;
+
+static userdriver userTable[NMAXFILES]; /* allocate user file handle tables */
+
+/*--------------------------------------------------------------------------*/
+int user_init(void) {
+    int ii;
+
+    /* Initialize user pointers to NULL. If a user pointer is NULL, that */
+    /* specifies that its accompanying userdriver instance is available for use */
+    for (ii = 0; ii < NMAXFILES; ii++) userTable[ii].userp = NULL;
+    return (0);
+}
+/*--------------------------------------------------------------------------*/
+int user_openusr(int (*init)(void* userp),
+                 int (*truncate)(LONGLONG filesize, void* userp),
+                 int (*close)(void* userp), int (*size)(LONGLONG* sizex, void* userp),
+                 int (*flush)(void* userp),
+                 int (*seek)(LONGLONG offset, LONGLONG* result, void* userp),
+                 int (*read)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+                 int (*write)(void* buffer, long nbytes, LONGLONG* offset, void* userp),
+                 void* userp, int* handle) {
+    int ii, status;
+
+    *handle = -1;
+    for (ii = 0; ii < NMAXFILES; ii++) /* find empty slot in handle table */
+    {
+        if (!userTable[ii].userp) {
+            *handle = ii;
+            break;
+        }
+    }
+    if (*handle == -1) return (TOO_MANY_FILES); /* too many files opened */
+
+    if (init) {
+        status = init(userp);
+        if (status > 0) {
+            return (status);
+        }
+    }
+
+    userTable[ii].userp = userp; /* pointer to user-defined data */
+    userTable[ii].offset = 0;
+    userTable[ii].truncate = truncate;
+    userTable[ii].close = close;
+    userTable[ii].size = size;
+    userTable[ii].flush = flush;
+    userTable[ii].seek = seek;
+    userTable[ii].read = read;
+    userTable[ii].write = write;
+    return (0);
+}
+/*--------------------------------------------------------------------------*/
+int user_truncate(int driverhandle, LONGLONG filesize) {
+    int status;
+    if (userTable[driverhandle].truncate) {
+        status = userTable[driverhandle].truncate(filesize,
+                                                  userTable[driverhandle].userp);
+        if (status > 0) return (status);
+        userTable[driverhandle].offset = filesize;
+        return (status);
+    }
+    return (0);
+}
+/*--------------------------------------------------------------------------*/
+int user_close(int driverhandle) {
+    int status;
+    status = 0;
+    if (userTable[driverhandle].close) {
+        status = userTable[driverhandle].close(userTable[driverhandle].userp);
+        /* Do not clear user pointer on error. */
+        if (status > 0) return status;
+    }
+    userTable[driverhandle].userp = 0; /* Clear user pointer to free userdriver */
+    return (status);
+}
+/*--------------------------------------------------------------------------*/
+int user_size(int driverhandle, LONGLONG* sizex) {
+    if (userTable[driverhandle].size)
+        return userTable[driverhandle].size(sizex, userTable[driverhandle].userp);
+    /* Signal if no function exists to get file size. */
+    return (SEEK_ERROR);
+}
+/*--------------------------------------------------------------------------*/
+int user_flush(int driverhandle) {
+    if (userTable[driverhandle].flush)
+        return userTable[driverhandle].flush(userTable[driverhandle].userp);
+    return (0);
+}
+/*--------------------------------------------------------------------------*/
+int user_seek(int driverhandle, LONGLONG offset) {
+    if (userTable[driverhandle].seek)
+        return userTable[driverhandle].seek(offset, &userTable[driverhandle].offset,
+                                            userTable[driverhandle].userp);
+    /* Assign offset manually by default. */
+    userTable[driverhandle].offset = offset;
+    return (0);
+}
+/*--------------------------------------------------------------------------*/
+int user_read(int driverhandle, void* buffer, long nbytes) {
+    if (userTable[driverhandle].read)
+        return userTable[driverhandle].read(buffer, nbytes,
+                                            &userTable[driverhandle].offset,
+                                            userTable[driverhandle].userp);
+    /* Signal if there is no read function. */
+    return (READ_ERROR);
+}
+/*--------------------------------------------------------------------------*/
+int user_write(int driverhandle, void* buffer, long nbytes) {
+    if (userTable[driverhandle].write)
+        return userTable[driverhandle].write(buffer, nbytes,
+                                             &userTable[driverhandle].offset,
+                                             userTable[driverhandle].userp);
+    /* Signal if there is no write function. */
+    return (WRITE_ERROR);
+}
 /*--------------------------------------------------------------------------*/
 int mem_init(void) {
     int ii;
